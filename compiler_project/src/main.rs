@@ -34,7 +34,10 @@ fn main() {
     Equality,
     NotEqual,
     Ident(String),
-    Num(i32)
+    Num(i32),
     End,
     }
+
+    
+
 }
