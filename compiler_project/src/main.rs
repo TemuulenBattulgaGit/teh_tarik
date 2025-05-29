@@ -9,7 +9,7 @@ enum Token {
   Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
   LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
   Divide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
-  Ident(String),Num(i32),
+  Ident(String), Num(i32),
   End,
 }
 
@@ -66,6 +66,76 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
     ' ' | '\n' => {
       i += 1;
     }
+
+    '(' => {
+      tokens.push(Token::LeftParen);
+      i += 1;
+    }
+
+    ')' => {
+      tokens.push(Token::RightParen);
+      i += 1;
+    }
+
+    '{' => {
+      tokens.push(Token::LeftCurly);
+      i += 1;
+    }
+
+    '}' => {
+      tokens.push(Token::RightCurly);
+      i += 1;
+    }
+
+    '[' => {
+      tokens.push(Token::LeftBracket);
+      i += 1;
+    }
+
+    ']' => {
+      tokens.push(Token::RightBracket);
+      i += 1;
+    }
+
+    ',' => {
+      tokens.push(Token::Comma);
+      i += 1;
+    }
+
+    ';' => {
+      tokens.push(Token::Semicolon);
+      i += 1;
+    }
+
+    '-' => {
+      tokens.push(Token::Subtract);
+      i += 1;
+    }
+
+    '*' => {
+      tokens.push(Token::Multiply);
+      i += 1;
+    }
+
+    '/' => {
+      tokens.push(Token::Divide);
+      i += 1;
+    }
+
+    '%' => {
+      tokens.push(Token::Modulus);
+      i += 1;
+    }
+
+    '#' => {
+      while i < bytes.len() && bytes[i] as char != '\n' {
+          i += 1;
+      }
+      if i < bytes.len() {
+        i += 1;
+      }
+    }
+
 
     _ => {
       return Err(format!("Unrecognized symbol '{}'", c));
