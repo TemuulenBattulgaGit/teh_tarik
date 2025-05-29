@@ -15,17 +15,17 @@ enum Token {
 
 fn create_identifier(code: &str) -> Token {
   match code {
-  "func" => Token::Func,
-  "return" => Token::Return,
-  "int" => Token::Int,
-
-  // todo: implement all keywords...
-  // ... all keywords...
-
-  "read" => Token::Read,
-  "while" => Token::While,
-  "if" => Token::If,
-  _ => Token::Ident(String::from(code)),
+    "func" => Token::Func,
+    "return" => Token::Return,
+    "int" => Token::Int,
+    "print" => Token::Print,
+    "read" => Token::Read,
+    "while" => Token::While,
+    "if" => Token::If,
+    "else" => Token::Else,
+    "break" => Token::Break,
+    "continue" => Token::Continue,
+    _ => Token::Ident(String::from(code)),
   }
 }
 
