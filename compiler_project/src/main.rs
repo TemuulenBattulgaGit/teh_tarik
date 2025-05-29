@@ -58,6 +58,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       tokens.push(token);
     }
 
+    // CASE: No extra stuff chars EASY!!!!
     '+' => {
       tokens.push(Token::Plus);
       i += 1;
@@ -127,6 +128,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       i += 1;
     }
 
+    // CASE: Ignoring Comments
     '#' => {
       while i < bytes.len() && bytes[i] as char != '\n' {
           i += 1;
@@ -136,6 +138,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    // CASE: Less or LessEqual
     '<' => {
       if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
         tokens.push(Token::LessEqual);
@@ -146,6 +149,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    // CASE: Greater or GreaterEqual
     '>' => {
       if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
         tokens.push(Token::GreaterEqual);
@@ -156,6 +160,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    // CASE: Assign or Equality
     '=' => {
       if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
         tokens.push(Token::Equality);
@@ -166,6 +171,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    // CASE: NotEqual
     '!' => {
       if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
         tokens.push(Token::NotEqual);
@@ -176,6 +182,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    // CASE: DEFAULT
     _ => {
       return Err(format!("Unrecognized symbol '{}'", c));
     }
