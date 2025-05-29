@@ -6,11 +6,11 @@ use std::env;
 
 #[derive(Debug, Clone)]
 enum Token {
-    Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
-    LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
-    Divide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
-    Ident(String),Num(i32),
-    End,
+  Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
+  LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
+  Divide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
+  Ident(String),Num(i32),
+  End,
 }
 
 fn create_identifier(code: &str) -> Token {
@@ -81,40 +81,56 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
 
 fn main() {
 
-    let args: Vec<String> = env::args().collect();
-    if args.len() == 1 {
-        println!("Please provide an input file through the commandline arguments for the lexer.");
-        return;
+  let args: Vec<String> = env::args().collect();
+  if args.len() == 1 {
+      println!("Please provide an input file through the commandline arguments for the lexer.");
+      return;
+  }
+
+  if args.len() > 2 {
+      println!("Too many commandline arguments.");
+      return;
+  }
+
+  // Getting the name of the file for lexical scanning
+  let filename = match args.get(1) {
+    Some(name) => name,  // Extracting the String reference
+    None => {
+      println!("Please provide a filename as argument");
+      return;
+    }
+  };
+
+
+  let code = match fs::read_to_string(filename) {
+    Err(error) => {
+      println!("**Error. File \"{}\": {}", filename, error);
+      return;
     }
 
-    if args.len() > 2 {
-        println!("Too many commandline arguments.");
-        return;
+    Ok(code) => {
+      code
+    } 
+
+  };
+
+  println!("Code:");
+  println!("{}", code);
+
+
+  // Connecting the lexer to the main function
+  // After reading the file successfully:
+  let tokens = match lex(&code) {
+    Err(error) => {
+      println!("Lexer error: {}", error);
+      return;
     }
+    Ok(tokens) => tokens,
+  };
 
-    let filename = match args.get(1) {
-
-        Some(name) => name,  // Extract the String reference
-        None => {
-            println!("Please provide a filename as argument");
-            return;
-        }
-    };
-
-
-    let code = match fs::read_to_string(filename) {
-        Err(error) => {
-            println!("**Error. File \"{}\": {}", filename, error);
-            return;
-        }
-
-        Ok(code) => {
-            code
-        } 
-
-    };
-
-    println!("Code:");
-    println!("{}", code);
+  // Printing out the tokens
+  for token in tokens {
+    println!("{:?}", token);
+  }
 
 }
