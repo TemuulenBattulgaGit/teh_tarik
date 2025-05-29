@@ -4,6 +4,7 @@
 use std::fs;
 use std::env;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 enum Token {
   Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
@@ -30,7 +31,7 @@ fn create_identifier(code: &str) -> Token {
 }
 
 // This is a lexer that parses numbers and math operations
-fn lex(mut code: &str) -> Result<Vec<Token>, String> {
+fn lex(code: &str) -> Result<Vec<Token>, String> {
   let bytes = code.as_bytes();
   let mut tokens: Vec<Token> = vec![];
 
@@ -65,7 +66,7 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
         i+=1;
         while i < bytes.len() {
           let character = bytes[i] as char;
-          if (character.is_alphabetic() || character.is_numeric() || character == '_') {
+          if character.is_alphabetic() || character.is_numeric() || character == '_' {
             i += 1;
           } else {
             break;
