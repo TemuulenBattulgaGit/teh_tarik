@@ -65,7 +65,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
             let error_start = start;
             while i < bytes.len() {
               let ch = bytes[i] as char;
-              if ch.is_alphabetic || ch == '_' {
+              if ch.is_alphabetic() || ch == '_' {
                 i += 1;
               } else {
                 break;
