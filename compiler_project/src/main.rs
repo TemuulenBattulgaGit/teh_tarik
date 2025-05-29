@@ -6,7 +6,7 @@ use std::env;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-enum Token {
+pub enum Token {
   Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
   LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
   Divide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
@@ -14,7 +14,7 @@ enum Token {
   End,
 }
 
-fn create_identifier(code: &str) -> Token {
+pub fn create_identifier(code: &str) -> Token {
   match code {
     "func" => Token::Func,
     "return" => Token::Return,
@@ -31,7 +31,7 @@ fn create_identifier(code: &str) -> Token {
 }
 
 // This is a lexer that parses numbers and math operations
-fn lex(code: &str) -> Result<Vec<Token>, String> {
+pub fn lex(code: &str) -> Result<Vec<Token>, String> {
   let bytes = code.as_bytes();
   let mut tokens: Vec<Token> = vec![];
 
