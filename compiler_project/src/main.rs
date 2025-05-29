@@ -5,7 +5,7 @@ use std::fs;
 use std::env;
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
   Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
   LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
@@ -43,9 +43,11 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 
       // CASE: Numbers
       '0'..='9' => {
+
         let start = i;
         i += 1;
         while i < bytes.len() {
+
           let digit = bytes[i] as char;
           if digit >= '0' && digit <= '9' {
             i += 1;
@@ -54,6 +56,27 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
           }
         }
         let end = i;
+
+        if i < bytes.len() {
+
+          let next_char = bytes[i] as char;
+          if next_char.is_alphabetic() || next_char == '-' {
+
+            let error_start = start;
+            while i < bytes.len() {
+              let ch = bytes[i] as char;
+              if ch.is_alphabetic || ch == '_' {
+                i += 1;
+              } else {
+                break;
+              }
+            }
+
+            let invalid_token = &code[error_start..i];
+            return Err(format!("Invalid identifier '{}' - identifiers cannot start with a digit", invalid_token))
+          }
+        }
+
         let string_token = &code[start..end];
         let number_value = string_token.parse::<i32>().unwrap();
         let token = Token::Num(number_value);
@@ -62,8 +85,10 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 
       // Case: Keywords or Identifiers
       'a'..='z' | 'A'..='Z' => {
+
         let start = i;
         i+=1;
+
         while i < bytes.len() {
           let character = bytes[i] as char;
           if character.is_alphabetic() || character.is_numeric() || character == '_' {
@@ -72,6 +97,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
             break;
           }
         }
+
         let end = i;
         let string_token = &code[start..end];
         let token = create_identifier(string_token);
@@ -149,8 +175,8 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         i += 1;
       }
 
-      // CASE: Ignoring Comments
-      '#' => {
+      '#' => { // CASE: Ignoring Comments
+
         while i < bytes.len() && bytes[i] as char != '\n' {
             i += 1;
         }
@@ -159,8 +185,8 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         }
       }
 
-      // CASE: Less or LessEqual
-      '<' => {
+      '<' => { // CASE: Less or LessEqual
+
         if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
           tokens.push(Token::LessEqual);
             i += 2;
@@ -170,8 +196,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         }
       }
 
-      // CASE: Greater or GreaterEqual
-      '>' => {
+      '>' => { // CASE: Greater or GreaterEqual
         if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
           tokens.push(Token::GreaterEqual);
             i += 2;
@@ -181,8 +206,8 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         }
       }
 
-      // CASE: Assign or Equality
-      '=' => {
+      '=' => { // CASE: Assign or Equality
+
         if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
           tokens.push(Token::Equality);
             i += 2;
@@ -192,8 +217,8 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         }
       }
 
-      // CASE: NotEqual
-      '!' => {
+      '!' => { // CASE: NotEqual
+
         if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
           tokens.push(Token::NotEqual);
           i += 2;
@@ -203,8 +228,8 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
         }
       }
 
-      // CASE: DEFAULT
-      _ => {
+      _ => {  // CASE: DEFAULT
+        
         return Err(format!("Unrecognized symbol '{}'", c));
       }
 
@@ -240,6 +265,7 @@ fn main() {
 
 
   let code = match fs::read_to_string(filename) {
+
     Err(error) => {
       println!("**Error. File \"{}\": {}", filename, error);
       return;
@@ -258,6 +284,7 @@ fn main() {
   // Connecting the lexer to the main function
   // After reading the file successfully:
   let tokens = match lex(&code) {
+
     Err(error) => {
       println!("Lexer error: {}", error);
       return;
@@ -271,3 +298,4 @@ fn main() {
   }
 
 }
+
