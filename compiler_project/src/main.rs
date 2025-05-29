@@ -7,8 +7,8 @@ use std::env;
 #[derive(Debug, Clone)]
 enum Token {
     Func, Return, Int, Print, Read, While, If, Else, Break, Continue, LeftParen, RightParen,
-    LeftCurly,RightCurly,LeftBraket, RightBraket, Comma, Semicolon, Plus, Substract, Multiply,
-    Devide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
+    LeftCurly,RightCurly,LeftBracket, RightBracket, Comma, Semicolon, Plus, Subtract, Multiply,
+    Divide, Modulus, Assign, Less, LessEqual, Greater, GreaterEqual, Equality, NotEqual,
     Ident(String),Num(i32),
     End,
 }
