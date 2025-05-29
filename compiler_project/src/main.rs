@@ -136,6 +136,45 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
       }
     }
 
+    '<' => {
+      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+        tokens.push(Token::LessEqual);
+          i += 2;
+      } else {
+        tokens.push(Token::Less);
+        i += 1;
+      }
+    }
+
+    '>' => {
+      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+        tokens.push(Token::GreaterEqual);
+          i += 2;
+      } else {
+        tokens.push(Token::Greater);
+        i += 1;
+      }
+    }
+
+    '=' => {
+      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+        tokens.push(Token::Equality);
+          i += 2;
+      } else {
+        tokens.push(Token::Assign);
+        i += 1;
+      }
+    }
+
+    '!' => {
+      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+        tokens.push(Token::NotEqual);
+        i += 2;
+      } else {
+        // Missing: what to do if it's just '!' by itself
+        return Err(format!("Unrecognized symbol '{}'", c));
+      }
+    }
 
     _ => {
       return Err(format!("Unrecognized symbol '{}'", c));
