@@ -40,152 +40,172 @@ fn lex(mut code: &str) -> Result<Vec<Token>, String> {
 
     match c {
 
-    '0'..='9' => {
-      let start = i;
-      i += 1;
-      while i < bytes.len() {
-        let digit = bytes[i] as char;
-        if digit >= '0' && digit <= '9' {
+      // CASE: Numbers
+      '0'..='9' => {
+        let start = i;
+        i += 1;
+        while i < bytes.len() {
+          let digit = bytes[i] as char;
+          if digit >= '0' && digit <= '9' {
+            i += 1;
+          } else {
+            break;
+          }
+        }
+        let end = i;
+        let string_token = &code[start..end];
+        let number_value = string_token.parse::<i32>().unwrap();
+        let token = Token::Num(number_value);
+        tokens.push(token);
+      }
+
+      // Case: Keywords or Identifiers
+      'a'..='z' | 'A'..='Z' => {
+        let start = i;
+        i+=1;
+        while i < bytes.len() {
+          let character = bytes[i] as char;
+          if (character.is_alphabetic() || character.is_numeric() || character == '_') {
+            i += 1;
+          } else {
+            break;
+          }
+        }
+        let end = i;
+        let string_token = &code[start..end];
+        let token = create_identifier(string_token);
+        tokens.push(token);
+
+      }
+
+      // CASE: No extra stuff chars EASY!!!!
+      '+' => {
+        tokens.push(Token::Plus);
+        i += 1;
+      }
+
+      ' ' | '\n' | '\t' | '\r' => {
+        i += 1;
+      }
+
+      '(' => {
+        tokens.push(Token::LeftParen);
+        i += 1;
+      }
+
+      ')' => {
+        tokens.push(Token::RightParen);
+        i += 1;
+      }
+
+      '{' => {
+        tokens.push(Token::LeftCurly);
+        i += 1;
+      }
+
+      '}' => {
+        tokens.push(Token::RightCurly);
+        i += 1;
+      }
+
+      '[' => {
+        tokens.push(Token::LeftBracket);
+        i += 1;
+      }
+
+      ']' => {
+        tokens.push(Token::RightBracket);
+        i += 1;
+      }
+
+      ',' => {
+        tokens.push(Token::Comma);
+        i += 1;
+      }
+
+      ';' => {
+        tokens.push(Token::Semicolon);
+        i += 1;
+      }
+
+      '-' => {
+        tokens.push(Token::Subtract);
+        i += 1;
+      }
+
+      '*' => {
+        tokens.push(Token::Multiply);
+        i += 1;
+      }
+
+      '/' => {
+        tokens.push(Token::Divide);
+        i += 1;
+      }
+
+      '%' => {
+        tokens.push(Token::Modulus);
+        i += 1;
+      }
+
+      // CASE: Ignoring Comments
+      '#' => {
+        while i < bytes.len() && bytes[i] as char != '\n' {
+            i += 1;
+        }
+        if i < bytes.len() {
           i += 1;
-        } else {
-          break;
         }
       }
-      let end = i;
-      let string_token = &code[start..end];
-      let number_value = string_token.parse::<i32>().unwrap();
-      let token = Token::Num(number_value);
-      tokens.push(token);
-    }
 
-    // CASE: No extra stuff chars EASY!!!!
-    '+' => {
-      tokens.push(Token::Plus);
-      i += 1;
-    }
-
-    ' ' | '\n' => {
-      i += 1;
-    }
-
-    '(' => {
-      tokens.push(Token::LeftParen);
-      i += 1;
-    }
-
-    ')' => {
-      tokens.push(Token::RightParen);
-      i += 1;
-    }
-
-    '{' => {
-      tokens.push(Token::LeftCurly);
-      i += 1;
-    }
-
-    '}' => {
-      tokens.push(Token::RightCurly);
-      i += 1;
-    }
-
-    '[' => {
-      tokens.push(Token::LeftBracket);
-      i += 1;
-    }
-
-    ']' => {
-      tokens.push(Token::RightBracket);
-      i += 1;
-    }
-
-    ',' => {
-      tokens.push(Token::Comma);
-      i += 1;
-    }
-
-    ';' => {
-      tokens.push(Token::Semicolon);
-      i += 1;
-    }
-
-    '-' => {
-      tokens.push(Token::Subtract);
-      i += 1;
-    }
-
-    '*' => {
-      tokens.push(Token::Multiply);
-      i += 1;
-    }
-
-    '/' => {
-      tokens.push(Token::Divide);
-      i += 1;
-    }
-
-    '%' => {
-      tokens.push(Token::Modulus);
-      i += 1;
-    }
-
-    // CASE: Ignoring Comments
-    '#' => {
-      while i < bytes.len() && bytes[i] as char != '\n' {
+      // CASE: Less or LessEqual
+      '<' => {
+        if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+          tokens.push(Token::LessEqual);
+            i += 2;
+        } else {
+          tokens.push(Token::Less);
           i += 1;
+        }
       }
-      if i < bytes.len() {
-        i += 1;
-      }
-    }
 
-    // CASE: Less or LessEqual
-    '<' => {
-      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
-        tokens.push(Token::LessEqual);
+      // CASE: Greater or GreaterEqual
+      '>' => {
+        if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+          tokens.push(Token::GreaterEqual);
+            i += 2;
+        } else {
+          tokens.push(Token::Greater);
+          i += 1;
+        }
+      }
+
+      // CASE: Assign or Equality
+      '=' => {
+        if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+          tokens.push(Token::Equality);
+            i += 2;
+        } else {
+          tokens.push(Token::Assign);
+          i += 1;
+        }
+      }
+
+      // CASE: NotEqual
+      '!' => {
+        if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
+          tokens.push(Token::NotEqual);
           i += 2;
-      } else {
-        tokens.push(Token::Less);
-        i += 1;
+        } else {
+          // Missing: what to do if it's just '!' by itself
+          return Err(format!("Unrecognized symbol '{}'", c));
+        }
       }
-    }
 
-    // CASE: Greater or GreaterEqual
-    '>' => {
-      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
-        tokens.push(Token::GreaterEqual);
-          i += 2;
-      } else {
-        tokens.push(Token::Greater);
-        i += 1;
-      }
-    }
-
-    // CASE: Assign or Equality
-    '=' => {
-      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
-        tokens.push(Token::Equality);
-          i += 2;
-      } else {
-        tokens.push(Token::Assign);
-        i += 1;
-      }
-    }
-
-    // CASE: NotEqual
-    '!' => {
-      if (i + 1) < bytes.len() && bytes[i+1] as char == '=' {
-        tokens.push(Token::NotEqual);
-        i += 2;
-      } else {
-        // Missing: what to do if it's just '!' by itself
+      // CASE: DEFAULT
+      _ => {
         return Err(format!("Unrecognized symbol '{}'", c));
       }
-    }
-
-    // CASE: DEFAULT
-    _ => {
-      return Err(format!("Unrecognized symbol '{}'", c));
-    }
 
     }
   }
