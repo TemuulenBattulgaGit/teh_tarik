@@ -4,7 +4,7 @@
 use std::fs;
 use std::env;
 
-// PHASE 2: PARSER STARTS HERE
+// PHASE 2: PARSER STARTS HERE --------------------------------------------------------
 
 // parse programs with multiple functions
 fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
@@ -502,7 +502,7 @@ fn parse_argument_list(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Str
 }
 
 
-// PHASE 2: END
+// PHASE 2: END------------------------------------------------------------------------------------
 
 fn main() {
 
