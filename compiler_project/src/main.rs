@@ -4,6 +4,582 @@
 use std::fs;
 use std::env;
 
+// PHASE 2: PARSER STARTS HERE
+
+// parse programs with multiple functions
+fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
+    while !at_end(tokens, *index) {
+      parse_function(tokens, index)?;
+    }
+    return Ok(());
+}
+
+fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
+  match tokens[index] {
+  Token::End => { true }
+  _ => { false }
+  }
+}
+
+// parse function with parameters: func add(int a, int b) { ... }
+fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    
+    match tokens[*index] {
+    Token::Func => { *index += 1; }
+    _ => { return Err(String::from("functions must begin with func")); }
+    }
+
+    match tokens[*index] {
+    Token::Ident(_) => { *index += 1; }
+    _  => { return Err(String::from("functions must have a function identifier"));}
+    }
+
+    match tokens[*index] {
+    Token::LeftParen => { *index += 1; }
+    _ => { return Err(String::from("expected '('"));}
+    }
+
+    // Handle parameters (optional)
+    if !matches!(tokens[*index], Token::RightParen) {
+        parse_parameter_list(tokens, index)?;
+    }
+
+    match tokens[*index] {
+    Token::RightParen => { *index += 1; }
+    _ => { return Err(String::from("expected ')'"));}
+    }
+
+    match tokens[*index] {
+    Token::LeftCurly => { *index += 1; }
+    _ => { return Err(String::from("expected '{'"));}
+    }
+
+    while !matches!(tokens[*index], Token::RightCurly) {
+        parse_statement(tokens, index)?;
+    }
+
+    match tokens[*index] {
+    Token::RightCurly => { *index += 1; }
+    _ => { return Err(String::from("expected '}'"));}
+    }
+
+    return Ok(());
+}
+
+// parse parameter list: int a, int b, int c
+fn parse_parameter_list(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    // int
+    match tokens[*index] {
+        Token::Int => { *index += 1; }
+        _ => { return Err(String::from("expected parameter type")); }
+    }
+    
+    // identifier
+    match tokens[*index] {
+        Token::Ident(_) => { *index += 1; }
+        _ => { return Err(String::from("expected parameter name")); }
+    }
+    
+    // Handle additional parameters (, int name)*
+    while matches!(tokens[*index], Token::Comma) {
+        *index += 1; // consume comma
+        
+        match tokens[*index] {
+            Token::Int => { *index += 1; }
+            _ => { return Err(String::from("expected parameter type after comma")); }
+        }
+        
+        match tokens[*index] {
+            Token::Ident(_) => { *index += 1; }
+            _ => { return Err(String::from("expected parameter name")); }
+        }
+    }
+    
+    Ok(())
+}
+
+// parsing statements
+fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Int => parse_declaration_statement(tokens, index),
+    Token::Ident(_) => parse_assignment_statement(tokens, index),
+    Token::Return => parse_return_statement(tokens, index),
+    Token::Print => parse_print_statement(tokens, index),
+    Token::Read => parse_read_statement(tokens, index),
+    Token::If => parse_if_statement(tokens, index),
+    Token::While => parse_while_statement(tokens, index),
+    Token::Break => parse_break_statement(tokens, index),
+    Token::Continue => parse_continue_statement(tokens, index),
+    _ => Err(String::from("invalid statement"))
+    }
+}
+
+// parse declaration: int a; or int [4] array;
+fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Int => {*index += 1;}
+    _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
+    }
+
+    // Check for array declaration: int [size] name
+    if matches!(tokens[*index], Token::LeftBracket) {
+        *index += 1; // consume [
+        
+        match tokens[*index] {
+            Token::Num(_) => { *index += 1; }
+            _ => { return Err(String::from("expected array size")); }
+        }
+        
+        match tokens[*index] {
+            Token::RightBracket => { *index += 1; }
+            _ => { return Err(String::from("expected ']'")); }
+        }
+    }
+
+    match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Declarations must have an identifier"));}
+    }
+
+    match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statements must end with a semicolon"));}
+    }
+
+    return Ok(());
+}
+
+// parse assignment: a = 5; or array[0] = 5;
+fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Assignment statements must begin with an identifier"));}
+    }
+
+    // Check for array access: ident[expression]
+    if matches!(tokens[*index], Token::LeftBracket) {
+        *index += 1; // consume [
+        parse_expression(tokens, index)?;
+        match tokens[*index] {
+            Token::RightBracket => { *index += 1; }
+            _ => { return Err(String::from("expected ']'")); }
+        }
+    }
+
+    match tokens[*index] {
+    Token::Assign => {*index += 1;}
+    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+    }
+
+    parse_expression(tokens, index)?;
+
+    match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with semicolon"));}
+    }
+
+    return Ok(());
+}
+
+fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Return => {*index += 1;}
+    _ => {return Err(String::from("Return statements must begin with 'return' keyword"));}
+    }
+
+    parse_expression(tokens, index)?;
+
+    match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with semicolon"));}
+    }
+
+    return Ok(());
+}
+
+fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Print => {*index += 1;}
+    _ => {return Err(String::from("Print statements must begin with 'print' keyword"));}
+    }
+
+    match tokens[*index] {
+    Token::LeftParen => {*index += 1;}
+    _ => {return Err(String::from("Print statements must have '('"));}
+    }
+
+    parse_expression(tokens, index)?;
+
+    match tokens[*index] {
+    Token::RightParen => {*index += 1;}
+    _ => {return Err(String::from("Print statements must have ')'"));}
+    }
+
+    match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with semicolon"));}
+    }
+
+    return Ok(());
+}
+
+fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+    Token::Read => {*index += 1;}
+    _ => {return Err(String::from("Read statements must begin with 'read' keyword"));}
+    }
+
+    match tokens[*index] {
+    Token::LeftParen => {*index += 1;}
+    _ => {return Err(String::from("Read statements must have '('"));}
+    }
+
+    match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Read statements expect an identifier"));}
+    }
+
+    match tokens[*index] {
+    Token::RightParen => {*index += 1;}
+    _ => {return Err(String::from("Read statements must have ')'"));}
+    }
+
+    match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with semicolon"));}
+    }
+
+    return Ok(());
+}
+
+fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    // if
+    match tokens[*index] {
+        Token::If => { *index += 1; }
+        _ => { return Err(String::from("expected 'if'")); }
+    }
+    
+    // condition
+    parse_expression(tokens, index)?;
+    
+    // {
+    match tokens[*index] {
+        Token::LeftCurly => { *index += 1; }
+        _ => { return Err(String::from("expected '{' after if condition")); }
+    }
+    
+    // statements
+    while !matches!(tokens[*index], Token::RightCurly) {
+        parse_statement(tokens, index)?;
+    }
+    
+    // }
+    match tokens[*index] {
+        Token::RightCurly => { *index += 1; }
+        _ => { return Err(String::from("expected '}'")); }
+    }
+    
+    // optional else
+    if matches!(tokens[*index], Token::Else) {
+        *index += 1; // consume else
+        
+        match tokens[*index] {
+            Token::LeftCurly => { *index += 1; }
+            _ => { return Err(String::from("expected '{' after else")); }
+        }
+        
+        while !matches!(tokens[*index], Token::RightCurly) {
+            parse_statement(tokens, index)?;
+        }
+        
+        match tokens[*index] {
+            Token::RightCurly => { *index += 1; }
+            _ => { return Err(String::from("expected '}'")); }
+        }
+    }
+    
+    Ok(())
+}
+
+fn parse_while_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+        Token::While => { *index += 1; }
+        _ => { return Err(String::from("expected 'while'")); }
+    }
+    
+    parse_expression(tokens, index)?; // condition
+    
+    match tokens[*index] {
+        Token::LeftCurly => { *index += 1; }
+        _ => { return Err(String::from("expected '{' after while condition")); }
+    }
+    
+    while !matches!(tokens[*index], Token::RightCurly) {
+        parse_statement(tokens, index)?;
+    }
+    
+    match tokens[*index] {
+        Token::RightCurly => { *index += 1; }
+        _ => { return Err(String::from("expected '}'")); }
+    }
+    
+    Ok(())
+}
+
+fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+        Token::Break => { *index += 1; }
+        _ => { return Err(String::from("expected 'break'")); }
+    }
+    
+    match tokens[*index] {
+        Token::Semicolon => { *index += 1; }
+        _ => { return Err(String::from("expected ';' after break")); }
+    }
+    
+    Ok(())
+}
+
+fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+        Token::Continue => { *index += 1; }
+        _ => { return Err(String::from("expected 'continue'")); }
+    }
+    
+    match tokens[*index] {
+        Token::Semicolon => { *index += 1; }
+        _ => { return Err(String::from("expected ';' after continue")); }
+    }
+    
+    Ok(())
+}
+
+// EXPRESSION PARSING - handles operator precedence
+
+// parsing complex expressions: handles comparisons (lowest precedence)
+fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    parse_additive_expression(tokens, index)?;
+    
+    loop {
+       match tokens[*index] {
+       Token::Less | Token::LessEqual | Token::Greater | 
+       Token::GreaterEqual | Token::Equality | Token::NotEqual => {
+           *index += 1;
+           parse_additive_expression(tokens, index)?;
+       }
+       _ => { 
+           break;
+       }
+       };
+    }
+
+    return Ok(());
+}
+
+// handles + and - (middle precedence)
+fn parse_additive_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    parse_multiplicative_expression(tokens, index)?;
+    
+    loop {
+       match tokens[*index] {
+       Token::Plus => {
+           *index += 1;
+           parse_multiplicative_expression(tokens, index)?;
+       }
+
+       Token::Subtract => {
+           *index += 1;
+           parse_multiplicative_expression(tokens, index)?;
+       }
+
+       _ => { 
+           break;
+       }
+       };
+    }
+
+    return Ok(());
+}
+
+// handles *, /, % (highest precedence)
+fn parse_multiplicative_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    parse_term(tokens, index)?;
+    
+    loop {
+       match tokens[*index] {
+       Token::Multiply => {
+          *index += 1;
+          parse_term(tokens, index)?;
+       }
+
+       Token::Divide => {
+          *index += 1;
+          parse_term(tokens, index)?;
+       }
+
+       Token::Modulus => {
+          *index += 1;
+          parse_term(tokens, index)?;
+       }
+  
+       _ => {
+           break;
+       }
+       };
+    }
+
+    return Ok(());
+}
+
+// Primary Expressions: numbers, identifiers, function calls, array access, parentheses
+fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+
+    Token::Ident(_) => {
+        *index += 1;
+        
+        // Check for array access: ident[expression]
+        if matches!(tokens[*index], Token::LeftBracket) {
+            *index += 1; // consume [
+            parse_expression(tokens, index)?;
+            match tokens[*index] {
+                Token::RightBracket => { *index += 1; }
+                _ => { return Err(String::from("expected ']'")); }
+            }
+        }
+        // Check for function call: ident(args)
+        else if matches!(tokens[*index], Token::LeftParen) {
+            *index += 1; // consume (
+            
+            // Handle arguments (optional)
+            if !matches!(tokens[*index], Token::RightParen) {
+                parse_argument_list(tokens, index)?;
+            }
+            
+            match tokens[*index] {
+                Token::RightParen => { *index += 1; }
+                _ => { return Err(String::from("expected ')'")); }
+            }
+        }
+        
+        return Ok(());
+    }
+
+    Token::Num(_) => {
+        *index += 1;
+        return Ok(());
+    }
+
+    Token::LeftParen => {
+        *index += 1;
+        parse_expression(tokens, index)?;
+
+        match tokens[*index] {
+        Token::RightParen => {*index += 1;}
+        _ => { return Err(String::from("missing right parenthesis ')'")); }
+        }
+        return Ok(());
+    }
+    
+    _ => {
+        return Err(String::from("missing expression term."));
+    }
+
+    }
+}
+
+// Parse Function Call Arguments: expr, expr, expr
+fn parse_argument_list(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    parse_expression(tokens, index)?;
+    
+    while matches!(tokens[*index], Token::Comma) {
+        *index += 1; // consume comma
+        parse_expression(tokens, index)?;
+    }
+    
+    Ok(())
+}
+
+
+// PHASE 2: END
+
+fn main() {
+
+  let args: Vec<String> = env::args().collect();
+  if args.len() == 1 {
+      println!("Please provide an input file through the commandline arguments for the lexer.");
+      return;
+  }
+
+  if args.len() > 2 {
+      println!("Too many commandline arguments.");
+      return;
+  }
+
+  // Getting the name of the file for lexical scanning
+  let filename = match args.get(1) {
+    Some(name) => name,  // Extracting the String reference
+    None => {
+      println!("Please provide a filename as argument");
+      return;
+    }
+  };
+
+
+  let code = match fs::read_to_string(filename) {
+
+    Err(error) => {
+      println!("**Error. File \"{}\": {}", filename, error);
+      return;
+    }
+
+    Ok(code) => {
+      code
+    } 
+
+  };
+
+  println!("Code:");
+  println!("{}", code);
+
+
+  // Connecting the lexer to the main function
+  // After reading the file successfully:
+  let tokens = match lex(&code) {
+    Err(error) => {
+      println!("**Error**");
+      println!("----------------------");
+      println!("{}", error);
+      println!("----------------------");
+      return;
+    }
+    Ok(tokens) => tokens,
+  };
+
+  // Parsing the tokens
+  let mut index: usize = 0;
+  match parse_program(&tokens, &mut index) {
+    Ok(()) => {
+        println!("Program Parsed Successfully.");
+    }
+    Err(message) => {
+        println!("**Error**");
+        println!("----------------------");
+        if tokens.len() == 0 {
+            println!("No code has been provided.");
+        } else {
+            println!("Error: {}", message);
+            println!("----------------------");
+        }
+    }
+  }
+
+}
+
+
+
+// PHASE 1: LEXICAL SCANNER STARTS HERE
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -240,833 +816,4 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
   return Ok(tokens);
 }
 
-
-fn main() {
-
-  let args: Vec<String> = env::args().collect();
-  if args.len() == 1 {
-      println!("Please provide an input file through the commandline arguments for the lexer.");
-      return;
-  }
-
-  if args.len() > 2 {
-      println!("Too many commandline arguments.");
-      return;
-  }
-
-  // Getting the name of the file for lexical scanning
-  let filename = match args.get(1) {
-    Some(name) => name,  // Extracting the String reference
-    None => {
-      println!("Please provide a filename as argument");
-      return;
-    }
-  };
-
-
-  let code = match fs::read_to_string(filename) {
-
-    Err(error) => {
-      println!("**Error. File \"{}\": {}", filename, error);
-      return;
-    }
-
-    Ok(code) => {
-      code
-    } 
-
-  };
-
-  println!("Code:");
-  println!("{}", code);
-
-
-  // Connecting the lexer to the main function
-  // After reading the file successfully:
-  let tokens = match lex(&code) {
-
-    Err(error) => {
-      println!("Lexer error: {}", error);
-      return;
-    }
-    Ok(tokens) => tokens,
-  };
-
-  // Printing out the tokens
-  for token in tokens {
-    println!("{:?}", token);
-  }
-
-}
-
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::*; // Imports Token enum and lex function
-
-//     #[test]
-//     fn test_add_tt() {
-//         let code = r#"func main() {
-//   int a;
-//   int b;
-//   int c;
-//   a = 100;
-//   b = 50;
-//   c = a + b;
-//   print(c);
-// }"#;
-        
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("a".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("c".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("a".to_string()),
-//             Token::Assign,
-//             Token::Num(100),
-//             Token::Semicolon,
-//             Token::Ident("b".to_string()),
-//             Token::Assign,
-//             Token::Num(50),
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Plus,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_math_tt() {
-//         let code = r#"# A simple program which shows mathematical operations.
-
-// func main() {
-//   int a;
-//   int b;
-//   int c;
-
-//   a = 100;
-//   b = 50;
-
-//   # This should output '150'
-//   c = a + b;
-//   print(c);
-
-//   # This should output '50'
-//   c = a - b;
-//   print(c);
-
-//   # This should output '5000'
-//   c = a * b;
-//   print(c);
-
-//   # This should output '2'
-//   c = a / b;
-//   print(c);
-
-//   # This should output '0'
-//   c = a % b;
-//   print(c);
-
-//   # Complex Expression. (4 + 2) * 7
-//   a = 4;
-//   b = 7;
-//   c = (a + 2) * b;
-//   print(c);
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("a".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("c".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("a".to_string()),
-//             Token::Assign,
-//             Token::Num(100),
-//             Token::Semicolon,
-//             Token::Ident("b".to_string()),
-//             Token::Assign,
-//             Token::Num(50),
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Plus,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Subtract,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Multiply,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Divide,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Ident("a".to_string()),
-//             Token::Modulus,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("a".to_string()),
-//             Token::Assign,
-//             Token::Num(4),
-//             Token::Semicolon,
-//             Token::Ident("b".to_string()),
-//             Token::Assign,
-//             Token::Num(7),
-//             Token::Semicolon,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::LeftParen,
-//             Token::Ident("a".to_string()),
-//             Token::Plus,
-//             Token::Num(2),
-//             Token::RightParen,
-//             Token::Multiply,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_array_tt() {
-//         let code = r#"func main() {
-//     int [4] array;
-
-//     # Should print out '2'
-//     array[0] = 2;
-//     print(array[0]);
-
-//     # Should print out '4'
-//     array[1] = array[0] + array[0];
-//     print(array[1]);
-
-//     # Should print out '8'
-//     array[2] = array[1] + 2 * 2;
-//     print(array[2]);
-
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::LeftBracket,
-//             Token::Num(4),
-//             Token::RightBracket,
-//             Token::Ident("array".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(0),
-//             Token::RightBracket,
-//             Token::Assign,
-//             Token::Num(2),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(0),
-//             Token::RightBracket,
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(1),
-//             Token::RightBracket,
-//             Token::Assign,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(0),
-//             Token::RightBracket,
-//             Token::Plus,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(0),
-//             Token::RightBracket,
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(1),
-//             Token::RightBracket,
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(2),
-//             Token::RightBracket,
-//             Token::Assign,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(1),
-//             Token::RightBracket,
-//             Token::Plus,
-//             Token::Num(2),
-//             Token::Multiply,
-//             Token::Num(2),
-//             Token::Semicolon,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("array".to_string()),
-//             Token::LeftBracket,
-//             Token::Num(2),
-//             Token::RightBracket,
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-// #[test]
-// fn test_function_tt() {
-//     let code = r#"func add(int a, int b) {
-//     return a + b;
-// }
-
-// func mul(int a, int b) {
-//      return a * b;
-// }
-
-// func main() {
-//     int a;
-//     int b;
-//     int c;
-//     a = 10;
-//     b = 2;
-//     c = add(a, b);
-//     print(c);
-//     c = mul(c, a + b);
-//     print(c);
-// }"#;
-
-//     let expected = vec![
-//         Token::Func,
-//         Token::Ident("add".to_string()),
-//         Token::LeftParen,
-//         Token::Int,
-//         Token::Ident("a".to_string()),
-//         Token::Comma,
-//         Token::Int,
-//         Token::Ident("b".to_string()),
-//         Token::RightParen,
-//         Token::LeftCurly,
-//         Token::Return,
-//         Token::Ident("a".to_string()),
-//         Token::Plus,
-//         Token::Ident("b".to_string()),
-//         Token::Semicolon,
-//         Token::RightCurly,
-//         Token::Func,
-//         Token::Ident("mul".to_string()),
-//         Token::LeftParen,
-//         Token::Int,
-//         Token::Ident("a".to_string()),
-//         Token::Comma,
-//         Token::Int,
-//         Token::Ident("b".to_string()),
-//         Token::RightParen,
-//         Token::LeftCurly,
-//         Token::Return,
-//         Token::Ident("a".to_string()),
-//         Token::Multiply,
-//         Token::Ident("b".to_string()),
-//         Token::Semicolon,
-//         Token::RightCurly,
-//         Token::Func,
-//         Token::Ident("main".to_string()),
-//         Token::LeftParen,
-//         Token::RightParen,
-//         Token::LeftCurly,
-//         Token::Int,
-//         Token::Ident("a".to_string()),
-//         Token::Semicolon,
-//         Token::Int,
-//         Token::Ident("b".to_string()),
-//         Token::Semicolon,
-//         Token::Int,
-//         Token::Ident("c".to_string()),  // ← This was missing
-//         Token::Semicolon,
-//         Token::Ident("a".to_string()),
-//         Token::Assign,
-//         Token::Num(10),
-//         Token::Semicolon,
-//         Token::Ident("b".to_string()),
-//         Token::Assign,
-//         Token::Num(2),
-//         Token::Semicolon,
-//         Token::Ident("c".to_string()),  // ← Fixed: was "a"
-//         Token::Assign,
-//         Token::Ident("add".to_string()),
-//         Token::LeftParen,
-//         Token::Ident("a".to_string()),  // ← Fixed: was Num(10)
-//         Token::Comma,
-//         Token::Ident("b".to_string()),  // ← Fixed: was Num(2)
-//         Token::RightParen,
-//         Token::Semicolon,
-//         Token::Print,
-//         Token::LeftParen,
-//         Token::Ident("c".to_string()),  // ← Fixed: was "a"
-//         Token::RightParen,
-//         Token::Semicolon,
-//         Token::Ident("c".to_string()),
-//         Token::Assign,
-//         Token::Ident("mul".to_string()),
-//         Token::LeftParen,
-//         Token::Ident("c".to_string()),
-//         Token::Comma,
-//         Token::Ident("a".to_string()),
-//         Token::Plus,
-//         Token::Ident("b".to_string()),
-//         Token::RightParen,
-//         Token::Semicolon,
-//         Token::Print,
-//         Token::LeftParen,
-//         Token::Ident("c".to_string()),
-//         Token::RightParen,
-//         Token::Semicolon,
-//         Token::RightCurly,
-//         Token::End,
-//     ];
-    
-//     let result = lex(code).unwrap();
-//     assert_eq!(result, expected);
-// }
-
-//     #[test]
-//     fn test_loop_tt() {
-//         let code = r#"func main() {
-//     int i;
-//     i = 0;
-//     while i < 10 {
-//         print(i);
-//         i = i + 1;
-//     }
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("i".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::While,
-//             Token::Ident("i".to_string()),
-//             Token::Less,
-//             Token::Num(10),
-//             Token::LeftCurly,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("i".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Ident("i".to_string()),
-//             Token::Plus,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_if_tt() {
-//         let code = r#"func main() {
-//     int a;
-//     int b;
-//     int c;
-
-    
-//     a = 100;
-//     b = 50;
-//     if a < b {
-//         c = 0;
-//     } else {
-//         c = 1;
-//     }
-
-//     # Should print out '1'.
-//     print(c);
-
-
-
-//     a = 100;
-//     b = 50;
-//     if a >= b {
-//         c = 0;
-//     } else {
-//         c = 1;
-//     }
-
-//     # Should print out '0'
-//     print(c);
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("a".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("b".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("c".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("a".to_string()),
-//             Token::Assign,
-//             Token::Num(100),
-//             Token::Semicolon,
-//             Token::Ident("b".to_string()),
-//             Token::Assign,
-//             Token::Num(50),
-//             Token::Semicolon,
-//             Token::If,
-//             Token::Ident("a".to_string()),
-//             Token::Less,
-//             Token::Ident("b".to_string()),
-//             Token::LeftCurly,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Else,
-//             Token::LeftCurly,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("a".to_string()),
-//             Token::Assign,
-//             Token::Num(100),
-//             Token::Semicolon,
-//             Token::Ident("b".to_string()),
-//             Token::Assign,
-//             Token::Num(50),
-//             Token::Semicolon,
-//             Token::If,
-//             Token::Ident("a".to_string()),
-//             Token::GreaterEqual,
-//             Token::Ident("b".to_string()),
-//             Token::LeftCurly,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Else,
-//             Token::LeftCurly,
-//             Token::Ident("c".to_string()),
-//             Token::Assign,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("c".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_nested_loop_tt() {
-//         let code = r#"func main() {
-//     int i;
-//     int j;
-//     i = 0;
-//     while i < 2 {
-//         j = 0;
-//         while j < 3 {
-//             print(j);
-//             j = j + 1;
-//         }
-//         i = i + 1;
-//     }
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("i".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("j".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::While,
-//             Token::Ident("i".to_string()),
-//             Token::Less,
-//             Token::Num(2),
-//             Token::LeftCurly,
-//             Token::Ident("j".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::While,
-//             Token::Ident("j".to_string()),
-//             Token::Less,
-//             Token::Num(3),
-//             Token::LeftCurly,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("j".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("j".to_string()),
-//             Token::Assign,
-//             Token::Ident("j".to_string()),
-//             Token::Plus,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Ident("i".to_string()),
-//             Token::Plus,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_break_tt() {
-//         let code = r#"func main() {
-//     int i;
-//     i = 0;
-//     while i < 10 {
-//         if i >= 4 {
-//             break;
-//         }
-//         print(i);
-//         i = i + 1;
-//     }
-// }"#;
-
-//         let expected = vec![
-//             Token::Func,
-//             Token::Ident("main".to_string()),
-//             Token::LeftParen,
-//             Token::RightParen,
-//             Token::LeftCurly,
-//             Token::Int,
-//             Token::Ident("i".to_string()),
-//             Token::Semicolon,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Num(0),
-//             Token::Semicolon,
-//             Token::While,
-//             Token::Ident("i".to_string()),
-//             Token::Less,
-//             Token::Num(10),
-//             Token::LeftCurly,
-//             Token::If,
-//             Token::Ident("i".to_string()),
-//             Token::GreaterEqual,
-//             Token::Num(4),
-//             Token::LeftCurly,
-//             Token::Break,
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::Print,
-//             Token::LeftParen,
-//             Token::Ident("i".to_string()),
-//             Token::RightParen,
-//             Token::Semicolon,
-//             Token::Ident("i".to_string()),
-//             Token::Assign,
-//             Token::Ident("i".to_string()),
-//             Token::Plus,
-//             Token::Num(1),
-//             Token::Semicolon,
-//             Token::RightCurly,
-//             Token::RightCurly,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_lexical_errors() {
-//         // Test invalid identifier starting with number
-//         assert!(lex("2a").is_err());
-        
-//         // Test unrecognized symbols
-//         assert!(lex("^^^").is_err());
-//         assert!(lex("@").is_err());
-//         assert!(lex("$").is_err());
-        
-//         // Test invalid characters
-//         assert!(lex("&").is_err());
-//         assert!(lex("~").is_err());
-//     }
-
-//     #[test]
-//     fn test_comments_removed() {
-//         let code = r#"int x; # This is a comment
-// int y;"#;
-        
-//         let expected = vec![
-//             Token::Int,
-//             Token::Ident("x".to_string()),
-//             Token::Semicolon,
-//             Token::Int,
-//             Token::Ident("y".to_string()),
-//             Token::Semicolon,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-
-//     #[test]
-//     fn test_comparison_operators() {
-//         let code = "< <= > >= == !=";
-        
-//         let expected = vec![
-//             Token::Less,
-//             Token::LessEqual,
-//             Token::Greater,
-//             Token::GreaterEqual,
-//             Token::Equality,
-//             Token::NotEqual,
-//             Token::End,
-//         ];
-        
-//         let result = lex(code).unwrap();
-//         assert_eq!(result, expected);
-//     }
-// }
+// PHASE 1: END
