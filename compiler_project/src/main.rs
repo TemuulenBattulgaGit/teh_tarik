@@ -30,30 +30,6 @@ fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
   }
 }
 
-// parsing a statement such as:
-// int a;
-// a = a + b;
-// a = a % b;
-// print(a)
-// read(a)
-// returns epsilon if '}'
-fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  match tokens[*index] {
-    Token::Int => parse_declaration_statement(tokens, index)?,
-    Token::Ident(_) => parse_assignment_statement(tokens, index)?,
-    Token::Return => parse_return_statement(tokens, index)?,
-    Token::Print => parse_print_statement(tokens, index)?,
-    Token::Read => parse_read_statement(tokens, index)?,
-    Token::While => parse_while_loop(tokens, index)?,
-    Token::If => parse_if_statement(tokens, index)?,
-    Token::Break => parse_break_statement(tokens, index)?,
-    Token::Continue => parse_continue_statement(tokens, index)?,
-    _ => Err(String::from("invalid statement"))
-  }
-  return Ok(());
-}
-
-
 // parse function such as:
 // func main(int a, int b) {
 //    # ... statements here...
@@ -79,7 +55,7 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
 
   while !matches!(tokens[*index], Token::RightParen) {
 
-    match parse_declaration_statement(tokens, index) {
+    match parse_function_parameter(tokens, index) {
       Ok(()) => {}
       Err(e) => {return Err(e);}
     }
@@ -111,6 +87,260 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
   return Ok(());
 }
 
+fn parse_function_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match tokens[*index] {
+    Token::Int => {*index += 1;}
+    _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
+  }
+
+  if matches!(tokens[*index], Token::LeftBracket) {
+    *index += 1;
+
+    match tokens[*index] {
+      Token::Num(_) => { *index += 1; }
+      _ => { return Err(String::from("Expected array size (number) after '['"));  }
+    }
+
+    match tokens[*index] {
+      Token::RightBracket => { *index += 1; }
+      _ => { return Err(String::from("Expected ']' after array size")); }
+    }
+  }
+
+  match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Declarations must have an identifier"));}
+  }
+
+  return Ok(());
+}
+
+// parsing a statement such as:
+// int a;
+// a = a + b;
+// a = a % b;
+// print(a)
+// read(a)
+// returns epsilon if '}'
+fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match tokens[*index] {
+    Token::Int => parse_declaration_statement(tokens, index)?,
+    Token::Ident(_) => parse_assignment_statement(tokens, index)?,
+    Token::Return => parse_return_statement(tokens, index)?,
+    Token::Print => parse_print_statement(tokens, index)?,
+    Token::Read => parse_read_statement(tokens, index)?,
+    Token::While => parse_while_loop(tokens, index)?,
+    Token::If => parse_if_statement(tokens, index)?,
+    Token::Break => parse_break_statement(tokens, index)?,
+    Token::Continue => parse_continue_statement(tokens, index)?,
+    _ => Err(String::from("invalid statement"))
+  }
+  return Ok(());
+}
+
+fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match tokens[*index] {
+    Token::Int => {*index += 1;}
+    _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
+  }
+
+  // Look ahead for an Array declaration
+  // the case of "Int [Num] Ident"
+  if matches!(tokens[*index], Token::LeftBracket) {
+    *index += 1;
+
+    match tokens[*index] {
+      Token::Num(_) => { *index += 1; }
+      _ => { return Err(String::from("Expected array size (number) after '['"));  }
+    }
+
+    match tokens[*index] {
+      Token::RightBracket => { *index += 1; }
+      _ => { return Err(String::from("Expected ']' after array size")); }
+    }
+  }
+
+  match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Declarations must have an identifier"));}
+  }
+
+  match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statements must end with a semicolon"));}
+  }
+
+  return Ok(());
+}
+
+fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_while_loop(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  todo!();
+}
+
+fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match tokens[*index] {
+    Token::Read => {*index += 1;}
+    _ => {return Err(String::from("Return statements must being with a return keyword"));}
+  }
+
+  match parse_expression(tokens, index) {
+    Ok(()) => {},
+    Err(e) => {return Err(e);}
+  }
+
+  match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+  }
+
+  return Ok(());
+}
+
+// parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
+fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match parse_multiply_expression(tokens, index) {
+    Ok(()) => {},
+    Err(e) => {return Err(e);}
+  }
+  loop {
+    match tokens[*index] {
+
+      Token::Plus => {
+        *index += 1;
+        match parse_multiply_expression(tokens, index) {
+          Ok(()) => {},
+          Err(e) => {return Err(e);}
+        }
+      }
+
+      Token::Subtract => {
+        *index += 1;
+        match parse_multiply_expression(tokens, index) {
+          Ok(()) => {},
+          Err(e) => {return Err(e);}
+        }
+      }
+
+      _ => { 
+        break;
+      }
+
+    };
+  }
+
+  return Ok(());
+}
+
+fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match parse_term(tokens, index) {
+    Ok(()) => {},
+    Err(e) => {return Err(e);}
+  }
+  loop {
+    match tokens[*index] {
+
+      Token::Multiply => {
+        *index += 1;
+        match parse_term(tokens, index) {
+          Ok(()) => {},
+          Err(e) => {return Err(e);}
+        }
+      }
+
+      Token::Divide => {
+        *index += 1;
+        match parse_term(tokens, index) {
+          Ok(()) => {},
+          Err(e) => {return Err(e);}
+        }
+      }
+
+      Token::Modulus => {
+        *index += 1;
+        match parse_term(tokens, index) {
+          Ok(()) => {},
+          Err(e) => {return Err(e);}
+        }
+      }
+
+      _ => {
+        break;
+      }
+    };
+  }
+
+  return Ok(());
+}
+
+// a term is either a Number or an Identifier.
+fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match tokens[*index] {
+    Token::Ident(_) => {
+      *index += 1;
+      return Ok(());
+    }
+
+    Token::Num(_) => {
+      *index += 1;
+      return Ok(());
+    }
+
+    Token::LeftParen => {
+      *index += 1;
+      match parse_expression(tokens, index) {
+        Ok(()) => {},
+        Err(e) => {return Err(e);}
+      }
+
+      match tokens[*index] {
+        Token::RightParen => {*index += 1;}
+        _ => { return Err(String::from("missing right parenthesis ')'")); }
+      }
+
+      return Ok(());
+    }
+    
+    _ => {
+      return Err(String::from("missing expression term."));
+    }
+
+  }
+}
 // PHASE 2: END---------------------------------------------------------------------------------
 
 fn main() {
@@ -193,7 +423,7 @@ fn main() {
 }
 
 
-// PHASE 1: LEXICAL SCANNER STARTS HERE
+// PHASE 1: LEXICAL SCANNER STARTS HERE --------------------------------------------------------------
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -430,5 +660,5 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
   return Ok(tokens);
 }
 
-// PHASE 1: END
+// PHASE 1: END ------------------------------------------------------------
 
