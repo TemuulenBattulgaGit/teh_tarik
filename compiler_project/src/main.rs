@@ -14,7 +14,7 @@ fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
   while !at_end(tokens, *index) {
     parse_function(tokens, index)?;
   }
-  
+
   return Ok(());
 }
 
@@ -96,7 +96,7 @@ fn parse_function_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<()
 
     match tokens[*index] {
       Token::Num(_) => { *index += 1; }
-      _ => { return Err(String::from("Expected array size (number) after '['"));  }
+      _ => { return Err(String::from("Expected array index (number) after '['"));  }
     }
 
     match tokens[*index] {
@@ -144,7 +144,7 @@ fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result
     _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
   }
 
-  // Look ahead for an Array declaration
+  // look ahead for an Array declaration
   // the case of "Int [Num] Ident"
   if matches!(tokens[*index], Token::LeftBracket) {
     *index += 1;
@@ -174,8 +174,41 @@ fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result
 }
 
 fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match tokens[*index] {
+    Token::Ident(_) => {*index += 1;}
+    _ => {return Err(String::from("Assignment statements must begin with an identifier"));}
+  }
+
+  // look ahead for an Array assignment
+  // the case of "ident [expression] = expression"
+  if matches!(tokens[*index], Token::LeftBracket) {
+    *index += 1;
+
+    parse_expression(tokens, index)?;
+
+    match tokens[*index] {
+      Token::RightBracket => { *index += 1; }
+      _ => { return Err(String::from("Expected ']' after array index index")); }
+    }
+  }
+  
+  //  '=' 
+  match tokens[*index] {
+    Token::Assign => {*index += 1;}
+    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+  }
+
+  parse_expression(tokens, index)?;
+
+  match tokens[*index] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statements must end with a semicolon"));}
+  }
+
+  return Ok(());
 }
+
 
 fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
   todo!();
@@ -237,18 +270,12 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
 
       Token::Plus => {
         *index += 1;
-        match parse_multiply_expression(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-        }
+        parse_multiply_expression(tokens, index)?;
       }
 
       Token::Subtract => {
         *index += 1;
-        match parse_multiply_expression(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-        }
+        parse_multiply_expression(tokens, index)?;
       }
 
       _ => { 
@@ -319,11 +346,8 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
     Token::LeftParen => {
       *index += 1;
-      match parse_expression(tokens, index) {
-        Ok(()) => {},
-        Err(e) => {return Err(e);}
-      }
-
+      parse_expression(tokens, index)?;
+      
       match tokens[*index] {
         Token::RightParen => {*index += 1;}
         _ => { return Err(String::from("missing right parenthesis ')'")); }
