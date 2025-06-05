@@ -4,7 +4,7 @@
 use std::fs;
 use std::env;
 
-// PHASE 2: PARSER STARTS HERE --------------------------------------------------------
+// PHASE 2: PARSER STARTS HERE ----------------------------------------------------------
 
 // parse programs with multiple functions
 // loop over everything, outputting generated code.
@@ -14,11 +14,10 @@ fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
   while !at_end(tokens, *index) {
 
     match parse_function(tokens, index) {
-    Ok(()) => {}
+    Ok(()) = {}
     Err(e) => { return Err(e); }
     }
   }
-
   return Ok(());
 }
 
@@ -31,6 +30,30 @@ fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
   }
 }
 
+// parsing a statement such as:
+// int a;
+// a = a + b;
+// a = a % b;
+// print(a)
+// read(a)
+// returns epsilon if '}'
+fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  match tokens[*index] {
+    Token::Int => parse_declaration_statement(tokens, index)?,
+    Token::Ident(_) => parse_assignment_statement(tokens, index)?,
+    Token::Return => parse_return_statement(tokens, index)?,
+    Token::Print => parse_print_statement(tokens, index)?,
+    Token::Read => parse_read_statement(tokens, index)?,
+    Token::While => parse_while_loop(tokens, index)?,
+    Token::If => parse_if_statement(tokens, index)?,
+    Token::Break => parse_break_statement(tokens, index)?,
+    Token::Continue => parse_continue_statement(tokens, index)?,
+    _ => Err(String::from("invalid statement"))
+  }
+  return Ok(());
+}
+
+
 // parse function such as:
 // func main(int a, int b) {
 //    # ... statements here...
@@ -38,7 +61,7 @@ fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
 // }
 // a loop is done to handle statements.
 fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-    
+
   match tokens[*index] {
     Token::Func => { *index += 1; }
     _ => { return Err(String::from("functions must begin with func")); }
@@ -49,13 +72,13 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
     _  => { return Err(String::from("functions must have a function identifier"));}
   }
 
-
   match tokens[*index] {
     Token::LeftParen => { *index += 1; }
     _ => { return Err(String::from("expected '('"));}
   }
 
   while !matches!(tokens[*index], Token::RightParen) {
+
     match parse_declaration_statement(tokens, index) {
       Ok(()) => {}
       Err(e) => {return Err(e);}
@@ -88,9 +111,7 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
   return Ok(());
 }
 
-
-
-// PHASE 2: END------------------------------------------------------------------------------------
+// PHASE 2: END---------------------------------------------------------------------------------
 
 fn main() {
 
@@ -170,7 +191,6 @@ fn main() {
   }
 
 }
-
 
 
 // PHASE 1: LEXICAL SCANNER STARTS HERE
@@ -411,3 +431,4 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 }
 
 // PHASE 1: END
+
