@@ -343,26 +343,35 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
 }
 
 fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match token[*tokens] {
+    Token::Continue => {*index += 1;}
+    _ => {return Err(String::from("Continue statement must start with a 'continue' keyword"));}
+  }
+
+  match token[*tokens] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with a semicolon"));}
+  }
+
+  return Ok(());
 }
 
-fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+// parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
+fn parse_bool_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  parse_expression(tokens, index)?;
 
   match tokens[*index] {
-    Token::Read => {*index += 1;}
-    _ => {return Err(String::from("Return statements must being with a return keyword"));}
+    Token::Less => {*index += 1;}
+    Token::LessEqual => {*index += 1;}
+    Token::Equality=> {*index += 1;}
+    Token::NotEqual => {*index += 1;}
+    Token::GreaterEqual => {*index += 1;}
+    Token::Less => {*index += 1;}
+    _ => {return Err(String::from("Expected a boolean operator"));}
   }
-
-  match parse_expression(tokens, index) {
-    Ok(()) => {},
-    Err(e) => {return Err(e);}
-  }
-
-  match tokens[*index] {
-    Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statement is missing the '=' operator"));}
-  }
-
+  
+  parse_expression(tokens, index)?;
   return Ok(());
 }
 
