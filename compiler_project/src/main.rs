@@ -12,21 +12,19 @@ fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
   assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
   while !at_end(tokens, *index) {
-
-    match parse_function(tokens, index) {
-    Ok(()) = {}
-    Err(e) => { return Err(e); }
-    }
+    parse_function(tokens, index)?;
   }
+  
   return Ok(());
 }
 
 // Provided function that checks if the parse program
 // has reached the end of the vector of tokens.
 fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
+
   match tokens[index] {
-  Token::End => { true }
-  _ => { false }
+    Token::End => { true }
+    _ => { false }
   }
 }
 
@@ -38,29 +36,32 @@ fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
 // a loop is done to handle statements.
 fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match tokens[*index] {
+  match tokens[*index] {  // func
     Token::Func => { *index += 1; }
     _ => { return Err(String::from("functions must begin with func")); }
   }
 
-  match tokens[*index] {
+  match tokens[*index] {  // ident
     Token::Ident(_) => { *index += 1; }
     _  => { return Err(String::from("functions must have a function identifier"));}
   }
 
-  match tokens[*index] {
+  match tokens[*index] {  // '('
     Token::LeftParen => { *index += 1; }
     _ => { return Err(String::from("expected '('"));}
   }
 
-  while !matches!(tokens[*index], Token::RightParen) {
+  // if not match ')' check for parameter if any
+  if !matches!(tokens[*index], Token::RightParen) {
+    parse_function_parameter(tokens, index)?;
 
-    match parse_function_parameter(tokens, index) {
-      Ok(()) => {}
-      Err(e) => {return Err(e);}
+    while matches!(tokens[*index], Token::Comma) {  // while there is ',' after each parameter
+      *index += 1; // parse comma
+      parse_function_parameter(tokens, index)?;
     }
   }
 
+  // ')'
   match tokens[*index] {
     Token::RightParen => { *index += 1; }
     _ => { return Err(String::from("expected ')'"));}
@@ -72,11 +73,7 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
   }
 
   while !matches!(tokens[*index], Token::RightCurly) {
-
-    match parse_statement(tokens, index) {
-      Ok(()) => {}
-      Err(e) => {return Err(e);}
-    }
+    parse_statement(tokens, index)?;
   }
 
   match tokens[*index] {
