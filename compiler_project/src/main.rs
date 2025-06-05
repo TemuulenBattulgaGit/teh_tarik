@@ -209,29 +209,137 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
   return Ok(());
 }
 
-
 fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match token[*tokens] {
+    Token::Return => {*index += 1;}
+    _ => {return Err(String::from("Return statement must begin with a 'return' keyword"));}
+  }
+
+  parse_expression(tokens, index)?;
+
+  match token[*tokens] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with a semicolon"));}
+  }
 }
 
 fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
-}
 
-fn parse_while_loop(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+  match token[*tokens] {
+    Token::print => {*index += 1;}
+    _ => {return Err(String::from("Print statement must begin with a 'print' keyword"));}
+  }
+
+  parse_term(tokens, index)?;
+
+  match token[*tokens] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with a semicolon"));}
+  }
+
+  return Ok(());
 }
 
 fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match token[*tokens] {
+    Token::Read => {*index += 1;}
+    _ => {return Err(String::from("Read statement must begin with a 'read' keyword"));}
+  }
+
+  parse_term(tokens, index)?;
+
+  match token[*tokens] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with a semicolon"));}
+  }
+
+  return Ok(());
+}
+
+fn parse_while_loop(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+
+  match token[*tokens] {
+    Token::While => {*index += 1;}
+    _ => {return Err(String::from("While statement must begin with a 'while' keyword"));}
+  }
+
+  parse_bool_expression(tokens, index)?;
+
+  match token[*tokens] {
+    Token::LeftCurly => {*index += 1;}
+    _ => {return Err(String::from("Expected '{' after bool expression"));}
+  }
+
+  if !matches!(token[*tokens], Token::RightCurly) {
+    parse_statement(tokens, index)?;
+  }
+
+  match token[*tokens] {
+    Token::RightCurly => {*index += 1;}
+    _ => {return Err(String::from("Expected '}'"));}
+  }
+
+  return Ok(());
 }
 
 fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match token[*tokens] {
+    Token::If => {*index += 1;}
+    _ => {return Err(String::from("If statement must begin with a 'if' keyword"));}
+  }
+
+  parse_bool_expression(tokens, index)?;
+
+  match token[*tokens] {
+    Token::LeftCurly => {*index += 1;}
+    _ => {return Err(String::from("Expected '{' after bool expression"));}
+  }
+
+  if !matches!(token[*tokens], Token::RightCurly) {
+    parse_statement(tokens, index)?;
+  }
+
+  match token[*tokens] {
+    Token::RightCurly => {*index += 1;}
+    _ => {return Err(String::from("Expected '}'"));}
+  }
+
+  if matches!(token[*tokens], Token::Else) {
+    *index += 1;
+
+    match token[*tokens] {
+      Token::LeftCurly => {*index += 1;}
+      _ => {return Err(String::from("Expected '{' after 'else' keyword"));}
+    }
+
+    parse_statement(tokens, index)?;
+
+    match token[*tokens] {
+      Token::RightCurly => {*index += 1;}
+      _ => {return Err(String::from("Expected '}'"));}
+    }
+  }
+
+
+  return Ok(());
 }
 
 fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-  todo!();
+
+  match token[*tokens] {
+    Token::Break => {*index += 1;}
+    _ => {return Err(String::from("Break statement must start with a 'break' keyword"));}
+  }
+
+  match token[*tokens] {
+    Token::Semicolon => {*index += 1;}
+    _ => {return Err(String::from("Statement must end with a semicolon"));}
+  }
+
+  return Ok(());
 }
 
 fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
