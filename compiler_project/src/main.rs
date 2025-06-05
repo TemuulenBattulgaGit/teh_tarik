@@ -211,14 +211,14 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
 
 fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Return => {*index += 1;}
     _ => {return Err(String::from("Return statement must begin with a 'return' keyword"));}
   }
 
   parse_expression(tokens, index)?;
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
@@ -226,14 +226,14 @@ fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), 
 
 fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
-    Token::print => {*index += 1;}
+  match token[*index] {
+    Token::Print => {*index += 1;}
     _ => {return Err(String::from("Print statement must begin with a 'print' keyword"));}
   }
 
   parse_term(tokens, index)?;
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
@@ -243,14 +243,14 @@ fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
 
 fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Read => {*index += 1;}
     _ => {return Err(String::from("Read statement must begin with a 'read' keyword"));}
   }
 
   parse_term(tokens, index)?;
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
@@ -260,23 +260,23 @@ fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), St
 
 fn parse_while_loop(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::While => {*index += 1;}
     _ => {return Err(String::from("While statement must begin with a 'while' keyword"));}
   }
 
   parse_bool_expression(tokens, index)?;
 
-  match token[*tokens] {
+  match token[*index] {
     Token::LeftCurly => {*index += 1;}
     _ => {return Err(String::from("Expected '{' after bool expression"));}
   }
 
-  if !matches!(token[*tokens], Token::RightCurly) {
+  if !matches!(token[*index], Token::RightCurly) {
     parse_statement(tokens, index)?;
   }
 
-  match token[*tokens] {
+  match token[*index] {
     Token::RightCurly => {*index += 1;}
     _ => {return Err(String::from("Expected '}'"));}
   }
@@ -286,38 +286,38 @@ fn parse_while_loop(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
 
 fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::If => {*index += 1;}
     _ => {return Err(String::from("If statement must begin with a 'if' keyword"));}
   }
 
   parse_bool_expression(tokens, index)?;
 
-  match token[*tokens] {
+  match token[*index] {
     Token::LeftCurly => {*index += 1;}
     _ => {return Err(String::from("Expected '{' after bool expression"));}
   }
 
-  if !matches!(token[*tokens], Token::RightCurly) {
+  if !matches!(token[*index], Token::RightCurly) {
     parse_statement(tokens, index)?;
   }
 
-  match token[*tokens] {
+  match token[*index] {
     Token::RightCurly => {*index += 1;}
     _ => {return Err(String::from("Expected '}'"));}
   }
 
-  if matches!(token[*tokens], Token::Else) {
+  if matches!(token[*index], Token::Else) {
     *index += 1;
 
-    match token[*tokens] {
+    match token[*index] {
       Token::LeftCurly => {*index += 1;}
       _ => {return Err(String::from("Expected '{' after 'else' keyword"));}
     }
 
     parse_statement(tokens, index)?;
 
-    match token[*tokens] {
+    match token[*index] {
       Token::RightCurly => {*index += 1;}
       _ => {return Err(String::from("Expected '}'"));}
     }
@@ -329,12 +329,12 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
 
 fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Break => {*index += 1;}
     _ => {return Err(String::from("Break statement must start with a 'break' keyword"));}
   }
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
@@ -344,12 +344,12 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
 
 fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Continue => {*index += 1;}
     _ => {return Err(String::from("Continue statement must start with a 'continue' keyword"));}
   }
 
-  match token[*tokens] {
+  match token[*index] {
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
