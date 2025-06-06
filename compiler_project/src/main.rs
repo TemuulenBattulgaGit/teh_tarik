@@ -844,3 +844,28 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 
 // PHASE 1: END ------------------------------------------------------------
 
+// PHASE 2: TESTS
+
+// writing tests!
+#[cfg(test)]
+mod tests {
+  use crate::lex;
+  use crate::parse_statement;
+
+  #[test]
+  fn test_statements() {
+    // test that valid statements are correct.
+    let tokens = lex("a = 1 + 2;").unwrap();
+    parse_statement(&tokens, &mut 0).unwrap();
+
+    let tokens = lex("b = 1 / 2;").unwrap();
+    parse_statement(&tokens, &mut 0).unwrap();
+
+
+    // test errors. missing semicolon
+    let tokens = lex("b = 1 / 2").unwrap();
+    assert!(matches!(parse_statement(&tokens, &mut 0), Err(_)));
+
+  }
+
+}
