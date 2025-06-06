@@ -472,9 +472,10 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
       // if after 'Ident' the token is '('
       if matches!(tokens[*index], Token::LeftParen) {
         *index += 1;
-        parse_expression(tokens, index)?;
         
         if !matches! (tokens[*index], Token::RightParen) {
+          parse_expression(tokens, index)?;
+          
           while matches!(tokens[*index], Token::Comma) {  // while there is ',' after each parameter
             *index += 1; // parse comma
             parse_expression(tokens, index)?;
@@ -483,7 +484,7 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
         match tokens[*index] {
           Token::RightParen => {*index += 1;}
-          _ => return {Err(String::from("Expected ')'" ));}
+          _ => {return Err(String::from("Expected ')'" ));}
         }
       }
 
