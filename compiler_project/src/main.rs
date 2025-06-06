@@ -222,6 +222,8 @@ fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), 
     Token::Semicolon => {*index += 1;}
     _ => {return Err(String::from("Statement must end with a semicolon"));}
   }
+
+  return Ok(());
 }
 
 fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
@@ -416,26 +418,17 @@ fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(
 
       Token::Multiply => {
         *index += 1;
-        match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-        }
+        parse_term(tokens, index)?;
       }
 
       Token::Divide => {
         *index += 1;
-        match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-        }
+        parse_term(tokens, index)?;
       }
 
       Token::Modulus => {
         *index += 1;
-        match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-        }
+        parse_term(tokens, index)?;
       }
 
       _ => {
@@ -451,8 +444,40 @@ fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(
 fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
   match tokens[*index] {
+
     Token::Ident(_) => {
       *index += 1;
+
+      // if after 'Ident' the token is '()'
+      if matches!(tokens[*index], Token::LeftParen) {
+        *index += 1;
+
+        while !matches!(tokens[*index], Token::RightParen) {
+          parse_expression(tokens, index)?;
+          
+          while matches!(tokens[*index], Token::Comma) {  // while there is ',' after each parameter
+            *index += 1; // parse comma
+            parse_function_parameter(tokens, index)?;
+          }
+        }
+
+        match tokens[*index] {
+          RightParen => {*index += 1;}
+          _ => {Err(String::from("Expected ')'" ));}
+        }
+      }
+
+      // if after 'Ident' the token is '['
+      if matches!(tokens[*index], Token::LeftBracket) {
+        *index += 1;
+        parse_expression(tokens, index)?;
+
+        match tokens[*index] {
+          RightBracket => {*index += 1;}
+          _ => {return Err(String::from("Expecter ']'"));}
+        }
+      }
+
       return Ok(());
     }
 
@@ -463,13 +488,13 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
     Token::LeftParen => {
       *index += 1;
+
       parse_expression(tokens, index)?;
-      
+
       match tokens[*index] {
         Token::RightParen => {*index += 1;}
         _ => { return Err(String::from("missing right parenthesis ')'")); }
       }
-
       return Ok(());
     }
     
