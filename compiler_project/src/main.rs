@@ -337,7 +337,9 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
       _ => {return Err(String::from("Expected '{' after 'else' keyword"));}
     }
 
-    parse_statement(tokens, index)?;
+    while !matches!(tokens[*index], Token::RightCurly) {
+      parse_statement(tokens, index)?;
+    }
 
     match tokens[*index] {
       Token::RightCurly => {*index += 1;}
@@ -389,7 +391,7 @@ fn parse_bool_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
     Token::NotEqual => {*index += 1;}
     Token::GreaterEqual => {*index += 1;}
     Token::Greater => {*index += 1;}
-    _ => return {Err(String::from("Expected a boolean operator"));}
+    _ => {return Err(String::from("Expected a boolean operator"));}
   }
   
   parse_expression(tokens, index)?;
@@ -471,17 +473,19 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
       if matches!(tokens[*index], Token::LeftParen) {
         *index += 1;
         parse_expression(tokens, index)?;
-          
-        while matches!(tokens[*index], Token::Comma) {  // while there is ',' after each parameter
-          *index += 1; // parse comma
-          parse_expression(tokens, index)?;
+        
+        if !matches! (tokens[*index], Token::RightParen) {
+          while matches!(tokens[*index], Token::Comma) {  // while there is ',' after each parameter
+            *index += 1; // parse comma
+            parse_expression(tokens, index)?;
+          }
         }
-      }
 
-      match tokens[*index] {
+        match tokens[*index] {
           Token::RightParen => {*index += 1;}
           _ => return {Err(String::from("Expected ')'" ));}
         }
+      }
 
       // if after 'Ident' the token is '['
       if matches!(tokens[*index], Token::LeftBracket) {
@@ -517,7 +521,6 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     _ => {
       return Err(String::from("missing expression term."));
     }
-
   }
 }
 // PHASE 2: END---------------------------------------------------------------------------------
