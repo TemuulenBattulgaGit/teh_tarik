@@ -123,15 +123,15 @@ fn parse_function_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<()
 fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 
   match tokens[*index] {
-    Token::Int => parse_declaration_statement(tokens, index)?,
-    Token::Ident(_) => parse_assignment_statement(tokens, index)?,
-    Token::Return => parse_return_statement(tokens, index)?,
-    Token::Print => parse_print_statement(tokens, index)?,
-    Token::Read => parse_read_statement(tokens, index)?,
-    Token::While => parse_while_loop(tokens, index)?,
-    Token::If => parse_if_statement(tokens, index)?,
-    Token::Break => parse_break_statement(tokens, index)?,
-    Token::Continue => parse_continue_statement(tokens, index)?,
+    Token::Int => parse_declaration_statement(tokens, index),
+    Token::Ident(_) => parse_assignment_statement(tokens, index),
+    Token::Return => parse_return_statement(tokens, index),
+    Token::Print => parse_print_statement(tokens, index),
+    Token::Read => parse_read_statement(tokens, index),
+    Token::While => parse_while_loop(tokens, index),
+    Token::If => parse_if_statement(tokens, index),
+    Token::Break => parse_break_statement(tokens, index),
+    Token::Continue => parse_continue_statement(tokens, index),
     _ => Err(String::from("invalid statement"))
   }
   return Ok(());
@@ -865,7 +865,5 @@ mod tests {
     // test errors. missing semicolon
     let tokens = lex("b = 1 / 2").unwrap();
     assert!(matches!(parse_statement(&tokens, &mut 0), Err(_)));
-
   }
-
 }
