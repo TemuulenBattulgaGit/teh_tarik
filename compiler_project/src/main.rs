@@ -850,8 +850,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 // writing tests!
 #[cfg(test)]
 mod tests {
-  use crate::lex;
-  use crate::parse_statement;
+  use crate::*;
 
   #[test]
   fn test_statements() {
@@ -866,5 +865,236 @@ mod tests {
     // test errors. missing semicolon
     let tokens = lex("b = 1 / 2").unwrap();
     assert!(matches!(parse_statement(&tokens, &mut 0), Err(_)));
+  }
+
+  #[test]
+  fn test_declaration_statements() {
+
+    let tokens = lex("int a;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("int [10] array;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("int;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("int a").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_assignment_statements() {
+
+    let tokens = lex("a = 1;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("arr[0] = 5;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("x = a + b * c;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("= 5;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("a 5;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_expressions() {
+
+    let tokens = lex("a + b").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("(a + b) * c").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("func_call(a, b)").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("array[index]").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("(a + b").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_err());
+
+    let tokens = lex("+ a").unwrap();
+    assert!(parse_expression(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_if_statements() {
+
+    let tokens = lex("if a < b { x = 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("if a == b { x = 1; } else { x = 2; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("if a < b x = 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("if { x = 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_while_statements() {
+
+    let tokens = lex("while i < 10 { i = i + 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("while a != b { print(a); }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("while { i = i + 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("while i < 10 i = i + 1; }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_function_parsing() {
+
+    let tokens = lex("func main() { int a; }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("func add(int a, int b) { return a + b; }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("func process(int [10] arr) { print(arr[0]); }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("main() { int a; }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_err());
+
+    let tokens = lex("func main( { int a; }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_complete_programs() {
+    let program = r#"
+          func main() {
+              int a;
+              int b;
+              a = 10;
+              b = 20;
+              if a < b {
+                  print(a);
+              } else {
+                  print(b);
+              }
+          }
+      "#;
+
+    let tokens = lex(program).unwrap();
+    assert!(parse_program(&tokens, &mut 0).is_ok());
+
+    let program = r#"
+          func add(int x, int y) {
+              return x + y;
+          }
+          
+          func main() {
+              int result;
+              result = add(5, 3);
+              print(result);
+          }
+      "#;
+
+    let tokens = lex(program).unwrap();
+    assert!(parse_program(&tokens, &mut 0).is_ok());
+  }
+
+  #[test]
+  fn test_boolean_expressions() {
+    let tokens = lex("a < b").unwrap();
+    assert!(parse_bool_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("x >= y").unwrap();
+    assert!(parse_bool_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("a == b + c").unwrap();
+    assert!(parse_bool_expression(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("a <").unwrap();
+    assert!(parse_bool_expression(&tokens, &mut 0).is_err());
+
+    let tokens = lex("< b").unwrap();
+    assert!(parse_bool_expression(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_break_continue_statements() {
+    let tokens = lex("break;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("continue;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("break").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("continue").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_print_read_statements() {
+    let tokens = lex("print(x);").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("read(y);").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let tokens = lex("print x);").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("read(;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+  }
+
+  #[test]
+  fn test_nested_structures() {
+
+    let program = r#"
+          if a > 0 {
+              if b > 0 {
+                  c = 1;
+              }
+          }
+      "#;
+      
+    let tokens = lex(program).unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+
+    let program = r#"
+          while i < 10 {
+              while j < 5 {
+                  j = j + 1;
+              }
+              i = i + 1;
+          }
+      "#;
+
+    let tokens = lex(program).unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_ok());
+  }
+
+  #[test]
+  fn test_error_recovery() {
+    // Testing various syntax errors to ensure good error messages
+    let tokens = lex("int [;").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
+
+    let tokens = lex("func () { }").unwrap();
+    assert!(parse_function(&tokens, &mut 0).is_err());
+
+    let tokens = lex("while a < b print(a); }").unwrap();
+    assert!(parse_statement(&tokens, &mut 0).is_err());
   }
 }
